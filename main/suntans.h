@@ -9,6 +9,7 @@
  * University. All Rights Reserved.
  *
  */
+
 #ifndef _suntans_h
 #define _suntans_h
 
@@ -29,8 +30,8 @@
 #define SMALL 1e-15
 #define CHECKCONSISTENCY 0
 #define DRYCELLHEIGHT 1e-10
-#define BUFFERHEIGHT 1e-2
-#define DEFAULT_NFACES 3
+#define BUFFERHEIGHT 4e-5
+#define DEFAULT_NFACES 4
 
 // Error/Exit codes
 #define EXIT_WRITING 1
@@ -38,7 +39,7 @@
 #define DEFAULTDATAFILE "suntans.dat"
 
 // define global variables for filenames
-char DATADIR[BUFFERLENGTH],
+extern char DATADIR[BUFFERLENGTH],
   DATAFILE[BUFFERLENGTH],
   PSLGFILE[BUFFERLENGTH], 
   POINTSFILE[BUFFERLENGTH], 
@@ -51,6 +52,6 @@ char DATADIR[BUFFERLENGTH],
   VERTSPACEFILE[BUFFERLENGTH], 
   TOPOLOGYFILE[BUFFERLENGTH];
 // define global variables
-int TRIANGULATE, GRID, SOLVE, VERBOSE, WARNING, ASCII, RESTART, NUMPROCS, STEPSPERFILE;
+extern int TRIANGULATE, GRID, SOLVE, VERBOSE, WARNING, ASCII, RESTART, NUMPROCS, STEPSPERFILE;
 
 #endif

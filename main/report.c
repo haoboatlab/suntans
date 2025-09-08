@@ -29,7 +29,11 @@ void ParseFlags(int argc, char *argv[], int myproc)
   STEPSPERFILE=-1;
 
   sprintf(DATADIR,".");
-  sprintf(DATAFILE,"%s/%s",DATADIR,DEFAULTDATAFILE);
+  int jstr;
+  jstr = sprintf(DATAFILE,"%s",DATADIR);
+  jstr += sprintf(DATAFILE+jstr,"%s","/");
+  jstr += sprintf(DATAFILE+jstr,"%s",DEFAULTDATAFILE);
+  // sprintf(DATAFILE,"%s/%s",DATADIR,DEFAULTDATAFILE);
 
   if(argc>1) {
     for(i=1;i<argc;i++) {
@@ -69,7 +73,10 @@ void ParseFlags(int argc, char *argv[], int myproc)
 
 	  if(!strcmp(str,"datadir")) {
 	    sprintf(DATADIR,"%s",val);
-	    sprintf(DATAFILE,"%s/%s",DATADIR,DEFAULTDATAFILE);
+      jstr = sprintf(DATAFILE,"%s",DATADIR);
+      jstr += sprintf(DATAFILE+jstr,"%s","/");
+      jstr += sprintf(DATAFILE+jstr,"%s",DEFAULTDATAFILE);
+	    // sprintf(DATAFILE,"%s/%s",DATADIR,DEFAULTDATAFILE);
 	  } else if(!strcmp("np",str)){
 		NUMPROCS=atoi(val);
 	   	printf("np = %d\n",NUMPROCS);
@@ -93,7 +100,11 @@ void ParseFlags(int argc, char *argv[], int myproc)
   }
 
   if(stat(DATAFILE,&filestat)==-1) {
-    sprintf(str,"Error opening data file %s on processor %d",DATAFILE,myproc);
+    jstr = sprintf(str,"%s","Error opening data file ");
+    jstr += sprintf(str+jstr,"%s",DATAFILE);
+    jstr += sprintf(str+jstr,"%s"," on processor ");
+    jstr += sprintf(str+jstr,"%d",myproc);
+    // sprintf(str,"Error opening data file %s on processor %d",DATAFILE,myproc);
     perror(str);
     MPI_Finalize();
     exit(EXIT_FAILURE);

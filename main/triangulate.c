@@ -29,7 +29,7 @@ void InitializeTriangle(struct triangulateio *mid, struct triangulateio *vorout)
  *
  */
 int GetTriangulation(gridT **grid, int myproc) {
-  int n, j, nf, Np, Ne, Nc;
+  int n, j, jstr, nf, Np, Ne, Nc;
   struct triangulateio in, out, vorout;
   REAL minarea;
   char str[BUFFERLENGTH];
@@ -51,10 +51,14 @@ int GetTriangulation(gridT **grid, int myproc) {
     sprintf(str,"Qznevc");//Qpzq33.8evc
   else
     sprintf(str,"Qpzqnev");//Qpzq33.8nev
-  if(minarea>0)
-    sprintf(str,"%sa%.5f",str,minarea);
-  else
+  if(minarea>0){
+    jstr = sprintf(str,"%s",str);
+    jstr += sprintf(str+jstr,"%s",".");
+    jstr += sprintf(str+jstr,"%.5f",minarea);
+    // sprintf(str,"%sa%.5f",str,minarea);
+  }else{
     sprintf(str,"%s",str);
+  }
 
   // This is the triangulation performed by the triangle.c program.
   triangulate(str, &in, &out, &vorout);

@@ -146,6 +146,9 @@ typedef struct _gridT {
   int stairstep;
   int fixdzz;
   REAL smoothbot;
+
+  REAL xmid;
+  REAL ymid;
 } gridT;
 
 // enums used to set type of boundary selection we will use

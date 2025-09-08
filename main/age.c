@@ -7,9 +7,12 @@
 
 #include "age.h"
 #include "memory.h"
-#include "sendrecv.h"
-#include "scalars.h"
 #include "mynetcdf.h"
+#include "scalars.h"
+#include "sendrecv.h"
+
+ageT *age;
+
 
 /*
  * Private functions
@@ -71,11 +74,11 @@ static void InitializeAgeVariables(gridT *grid, propT *prop, int myproc){
 
     int i,k,Nc=grid->Nc;
     REAL *ncscratch;
-    int Nci, Nki, T0;
+    int Nci, Nki, T0, Nei;
 
     // Read the netcdf properties and allocate a scratch array for reading in the data
     if (prop->readinitialnc>0){
-	ReadInitialNCcoord(prop,grid,&Nci,&Nki,&T0,myproc);
+	ReadInitialNCcoord(prop,grid,&Nci,&Nki,&Nei,&T0,myproc);
 	ncscratch = (REAL *)SunMalloc(Nki*Nci*sizeof(REAL),"InitializeAgeVariables");
     }
 

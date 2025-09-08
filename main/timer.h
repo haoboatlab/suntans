@@ -15,7 +15,7 @@
 #include "suntans.h"
 
 // Global variables for timing
-REAL t_start, t_source, t_predictor, t_nonhydro, t_turb, t_transport, t_io, t_comm,
+extern REAL t_start, t_source, t_predictor, t_nonhydro, t_turb, t_transport, t_io, t_comm,
   t_check, t_tictoc;
 
 /*
@@ -26,7 +26,7 @@ REAL t_start, t_source, t_predictor, t_nonhydro, t_turb, t_transport, t_io, t_co
  * defined in timer.h.
  *
  */
-extern REAL Timer(void);
+REAL Timer(void);
 void Tic(void);
 REAL Toc(void);
 

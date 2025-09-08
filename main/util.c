@@ -9,9 +9,11 @@
  * University. All Rights Reserved.
  *
  */
-#include<math.h>
+#define _XOPEN_SOURCE 700
+#include <math.h>
 #include "grid.h"
 #include "util.h"
+#include <time.h>
 
 void Sort(int *a, int *v, int N)
 {

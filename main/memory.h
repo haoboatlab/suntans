@@ -13,10 +13,11 @@
 #define _memory_h
 
 #include "suntans.h"
+#include "mympi.h"
 
-unsigned TotSpace;
-int VerboseMemory;
-char oldAllocFunction[BUFFERLENGTH], oldFreeFunction[BUFFERLENGTH];
+extern unsigned TotSpace;
+extern int VerboseMemory;
+extern char oldAllocFunction[BUFFERLENGTH], oldFreeFunction[BUFFERLENGTH];
 
 /*
  * Function: SunMalloc

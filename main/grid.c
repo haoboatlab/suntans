@@ -19,6 +19,8 @@
 #include "timer.h"
 #include "gridio.h"
 #include "sendrecv.h"
+#include "timer.h"
+#include "subgrid.h"
 
 #define VTXDISTMAX 100
 
@@ -428,11 +430,13 @@ void InitMainGrid(gridT **grid, int Np, int Ne, int Nc, int myproc)
  */
 void GetDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
 {
-  int n, maxgridweight=1000, IntDepth, Nkmax, stairstep, fixdzz, kount=0;
+  int n, maxgridweight=1000, IntDepth, Nkmax, stairstep, fixdzz, kount=0,subgrid,N,i,segN;
+  REAL *x_sub,*y_sub,*d_sub,dmax;
   REAL mindepth, maxdepth, maxdepth0, minimum_depth, *dz;
   char str[BUFFERLENGTH];
   FILE *ofile;
 
+  subgrid=MPI_GetValue(DATAFILE,"subgrid","InterpDepth",myproc);
   Nkmax = MPI_GetValue(DATAFILE,"Nkmax","GetDepth",myproc);
   stairstep = MPI_GetValue(DATAFILE,"stairstep","GetDepth",myproc);
 
@@ -442,7 +446,7 @@ void GetDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
   mindepth=INFTY;
   IntDepth=(int)MPI_GetValue(DATAFILE,"IntDepth","GetDepth",myproc);
   minimum_depth=(REAL)MPI_GetValue(DATAFILE,"minimum_depth","GetDepth",myproc);
-  //fixdzz=(REAL)MPI_GetValue(DATAFILE,"fixdzz","GetDepth",myproc);
+  fixdzz=(REAL)MPI_GetValue(DATAFILE,"fixdzz","GetDepth",myproc);
   grid->dzsmall = (REAL)MPI_GetValue(DATAFILE,"dzsmall","FixDZZ",myproc);
 
   if(IntDepth==1) 
@@ -452,14 +456,40 @@ void GetDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
     // already have cell center values so just read these
     ReadDepth(grid,myproc);
   else {
+    if(subgrid)
+    {
+      segN=MPI_GetValue(DATAFILE,"segN","InterpDepth",myproc);
+      N=(grid->maxfaces-2)*(segN+1)*(segN+2)/2;
+      x_sub = (REAL *)SunMalloc(N*sizeof(REAL),"InterpDepth");
+      y_sub = (REAL *)SunMalloc(N*sizeof(REAL),"InterpDepth");
+      d_sub = (REAL *)SunMalloc(N*sizeof(REAL),"InterpDepth");    
+    }
     for(n=0;n<grid->Nc;n++) {
-      // get from from the initialization.c file
-      grid->dv[n]=ReturnDepth(grid->xv[n],grid->yv[n]);
+      if(subgrid){
+        CalculateCellSubgridXY(&x_sub[0], &y_sub[0], n, segN, grid, myproc);
+        N=(grid->nfaces[n]-2)*(segN+1)*(segN+2)/2;
+      
+        for(i=0;i<N;i++){        
+          d_sub[i]=ReturnSubgridPointDepth(x_sub[i],y_sub[i],grid->xv[n],grid->yv[n]);
+          if(i==0)
+            dmax=d_sub[i];
+          else
+            if(dmax<d_sub[i])
+              dmax=d_sub[i];
+        }
+        grid->dv[n]=dmax; 
+      } else
+        // get from from the initialization.c file
+        grid->dv[n]=ReturnDepth(grid->xv[n],grid->yv[n]);
     }
   }
 
   if(myproc==0 && IntDepth!=2) {
-    sprintf(str,"%s-voro",INPUTDEPTHFILE);
+
+    int jstr;
+    jstr = sprintf(str,"%s",INPUTDEPTHFILE);
+    jstr += sprintf(str+jstr,"%s","-voro");
+    // sprintf(str,"%s-voro",INPUTDEPTHFILE);
     ofile = MPI_FOpen(str,"w","InterpDepth",myproc);
     for(n=0;n<grid->Nc;n++) 
       fprintf(ofile,"%f %f %f\n",grid->xv[n],grid->yv[n],grid->dv[n]);
@@ -473,29 +503,29 @@ void GetDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
 
   GetDZ(dz,maxdepth,maxdepth,Nkmax,myproc);  
 
-  //  if(!stairstep && fixdzz) 
-  //    FixDZZ(grid,maxdepth,Nkmax,fixdzz,myproc);
+   if(!stairstep && fixdzz) 
+     FixDZZ(grid,maxdepth,Nkmax,fixdzz,myproc);
 
   if(minimum_depth!=0) {
     if(minimum_depth>0) {
       printf("Setting minimum depth to %f\n",minimum_depth);
       for(n=0;n<grid->Nc;n++) {
-	if(grid->dv[n]<minimum_depth) {
-	  grid->dv[n]=minimum_depth;
-	  kount++;
-	}
+  if(grid->dv[n]<minimum_depth) {
+    grid->dv[n]=minimum_depth;
+    kount++;
+  }
       }
       if(VERBOSE>0 && myproc==0 && kount>0) 
-	printf("Increased the depth to the minimum set value of %.2f %d times.\n",minimum_depth,kount);
+  printf("Increased the depth to the minimum set value of %.2f %d times.\n",minimum_depth,kount);
     } else if(minimum_depth<0) {
       for(n=0;n<grid->Nc;n++) {
-	if(grid->dv[n]<dz[0]) {
-	  grid->dv[n]=dz[0];
-	  kount++;
-	}
+  if(grid->dv[n]<dz[0]) {
+    grid->dv[n]=dz[0];
+    kount++;
+  }
       }
       if(VERBOSE>0 && myproc==0 && kount>0) 
-	printf("Increased the depth to the minimum set value of dz[0]=%.2f %d times.\n",dz[0],kount);
+  printf("Increased the depth to the minimum set value of dz[0]=%.2f %d times.\n",dz[0],kount);
     }
   }
   
@@ -511,14 +541,14 @@ void GetDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
   if(Nkmax>1) {
     if(mindepth!=maxdepth) 
       for(n=0;n<grid->Nc;n++) {
-	grid->vwgt[n]=(int)(maxgridweight*(float)GetNk(dz,grid->dv[n],Nkmax)/(float)Nkmax);
-	//	grid->vwgt[n] = (int)(maxgridweight*(grid->dv[n]-mindepth)/(maxdepth-mindepth));
+  grid->vwgt[n]=(int)(maxgridweight*(float)GetNk(dz,grid->dv[n],Nkmax)/(float)Nkmax);
+  //  grid->vwgt[n] = (int)(maxgridweight*(grid->dv[n]-mindepth)/(maxdepth-mindepth));
     } else
       for(n=0;n<grid->Nc;n++) 
-	grid->vwgt[n] = maxgridweight;
+  grid->vwgt[n] = maxgridweight;
   } else {
       for(n=0;n<grid->Nc;n++) 
-	grid->vwgt[n] = Nkmax;
+  grid->vwgt[n] = Nkmax;
   }
 
   if(VERBOSE>3) 
@@ -526,6 +556,12 @@ void GetDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
       printf("grid->vwgt[%d]=%d\n",n,grid->vwgt[n]);
 
   SunFree(dz,Nkmax*sizeof(REAL),"GetDepth");
+  if(subgrid && !IntDepth)
+  {
+    free(x_sub);
+    free(y_sub);
+    free(d_sub);
+  }
 }
 
 /*
@@ -659,9 +695,10 @@ static void CreateFaceArray(int *grad, int *gradf, int *neigh, int *face, int *n
   for(n=0;n<Nc;n++)
     for(nf=0;nf<nfaces[n];nf++)
       face[n*maxfaces+nf]=-1; 
-  for(n=0;n<Ne;n++)
-    for(j=0;j<2;j++)
-      gradf[2*n+j]=-1;
+  // commented out for periodic boundary conditions//
+  // for(n=0;n<Ne;n++)
+  //   for(j=0;j<2;j++)
+  //     gradf[2*n+j]=-1;
 
   // over each edge
   for(n=0;n<Ne;n++) {
@@ -1038,9 +1075,12 @@ void Connectivity(gridT *grid, int myproc)
   // printf("faces is %d", grid->face[99]);
   // reorder the cell points so that they have structure for use in interpolation
   // now reordercellpoints may reorder face, so gradf should be reordered
-  if(grid->maxfaces==3)
-      ReorderCellPoints(grid->face, grid->edges, grid->cells, grid->nfaces, grid->maxfaces, grid->Nc);
+
+// This is removed for periodic boundary conditions
+  // if(grid->maxfaces==3)
+  //   ReorderCellPoints(grid->face, grid->edges, grid->cells, grid->nfaces, grid->maxfaces, grid->Nc);
   // reorder gradf
+
   Reordergradf(grid->face, grid->grad, grid->gradf, grid->nfaces, grid->maxfaces, grid->Nc, grid->Ne);
 
   // create dot product of unique normal with outward normal
@@ -1429,7 +1469,7 @@ static void VertGrid(gridT *maingrid, gridT **localgrid, MPI_Comm comm)
     for(k=0;k<maingrid->Nkmax;k++)
       dmaxtest+=maingrid->dz[k];
     for(i=0;i<maingrid->Nc;i++)
-      if(fabs(maingrid->dv[i]-dmaxtest)>SMALL && WARNING) {
+      if(fabs(maingrid->dv[i]-dmaxtest>SMALL) && WARNING) {
         printf("Warning...sum of grid spacings dz is less than depth! %e\n",maingrid->dv[i]-dmaxtest);
         break;
       }
@@ -1473,7 +1513,7 @@ static void VertGrid(gridT *maingrid, gridT **localgrid, MPI_Comm comm)
           // add up the cumulative cell depth until it exceeds the actual depth
           dmaxtest+=(*localgrid)->dz[k];
           (*localgrid)->Nk[i] = k+1;
-          if(dmaxtest>=(*localgrid)->dv[i]) 
+          if(dmaxtest>=(*localgrid)->dv[i] || fabs(dmaxtest-(*localgrid)->dv[i])<=DRYCELLHEIGHT) 
             break;
         }
       }
@@ -1486,7 +1526,7 @@ static void VertGrid(gridT *maingrid, gridT **localgrid, MPI_Comm comm)
         for(k=0;k<maingrid->Nkmax;k++) {
           dmaxtest+=maingrid->dz[k];
           maingrid->Nk[i] = k+1;
-          if(dmaxtest>=maingrid->dv[i]) 
+          if(dmaxtest>=maingrid->dv[i] || fabs(dmaxtest-maingrid->dv[i])<=DRYCELLHEIGHT) 
             break;
         }
       }
@@ -1579,7 +1619,6 @@ static void VertGrid(gridT *maingrid, gridT **localgrid, MPI_Comm comm)
       (*localgrid)->Nkp[i]=0;
   }
 }
-
 /*
  * Function: ResortBoundaries
  * Usage: ResortBoundaries(grid,myproc);
@@ -2018,6 +2057,7 @@ static void ReOrder(gridT *grid)
     grad1=grid->grad[2*n];
     grad2=grid->grad[2*n+1];
     enei=grad1+grad2-2;
+    // changed to nf<enei for periodic boundary conditions //
     for(nf=0;nf<enei;nf++) 
       tmp[2*(grid->maxfaces-1)*n+nf]=grid->eneigh[2*(grid->maxfaces-1)*n+nf];
   for(n=0;n<Ne;n++)
@@ -3278,7 +3318,7 @@ static int IsNeighborGlobalByNode(int cell, gridT *maingrid,
 static void Geometry(gridT *maingrid, gridT **grid, int myproc)
 {
   int n, nf, npc, ne, k, j, Nc=(*grid)->Nc, Ne=(*grid)->Ne, Np=(*grid)->Np, p1, p2,grad1,grad2,enei;
-  REAL xt[(*grid)->maxfaces], yt[(*grid)->maxfaces], xc, yc, den, R0, tx, ty, tmag, xdott;
+  REAL xt[(*grid)->maxfaces], yt[(*grid)->maxfaces], xc, yc, den, R0, tx, ty, tmag, xdott, nx1, nx2, ny1, ny2;
   REAL dx, dy, tmp_mag; // MR
   
   (*grid)->Ac = (REAL *)SunMalloc(Nc*sizeof(REAL),"Geometry");
@@ -3491,21 +3531,55 @@ static void Geometry(gridT *maingrid, gridT **grid, int myproc)
   if(myproc==0 && VERBOSE>2) printf("\t\tComputing n1, n2, and dg..\n");
   // for each edge
   for(n=0;n<Ne;n++) {
-    // if both cells are not ghost cells 
+    /////////////periodic BC//////////////
     if((*grid)->grad[2*n]!=-1 && (*grid)->grad[2*n+1]!=-1) {
-      (*grid)->n1[n] = (*grid)->xv[(*grid)->grad[2*n]]-(*grid)->xv[(*grid)->grad[2*n+1]];
-      (*grid)->n2[n] = (*grid)->yv[(*grid)->grad[2*n]]-(*grid)->yv[(*grid)->grad[2*n+1]];
-      (*grid)->dg[n] = sqrt(pow((*grid)->n1[n],2)+pow((*grid)->n2[n],2));
-      (*grid)->n1[n] = (*grid)->n1[n]/(*grid)->dg[n];
-      (*grid)->n2[n] = (*grid)->n2[n]/(*grid)->dg[n];
-      if(((*grid)->xv[(*grid)->grad[2*n]]==
-            (*grid)->xv[(*grid)->grad[2*n+1]]) &&
-          ((*grid)->yv[(*grid)->grad[2*n]]==
-           (*grid)->yv[(*grid)->grad[2*n+1]])) {
-        printf("Coincident Voronoi points on edge %d (%d,%d)!\n",n,
-            (*grid)->grad[2*n],(*grid)->grad[2*n+1]);
+      nx1 = (*grid)->xv[(*grid)->grad[2*n]]-(*grid)->xe[n];
+      ny1 = (*grid)->yv[(*grid)->grad[2*n]]-(*grid)->ye[n];
+
+      nx2 = (*grid)->xv[(*grid)->grad[2*n+1]]-(*grid)->xe[n];
+      ny2 = (*grid)->yv[(*grid)->grad[2*n+1]]-(*grid)->ye[n];
+      
+      // Need to account for the possibility of a periodic edge that has both Voronoi points
+      // on the same side.  In this case choose the smaller of the two to determine the Voronoi
+      // distance.
+      if((nx1*nx2+ny1*ny2)>0) {
+  if(nx1*nx1+ny1*ny1 <= nx2*nx2+ny2*ny2) {
+    (*grid)->n1[n] = nx1;
+    (*grid)->n2[n] = ny1;
+  } else {
+    (*grid)->n1[n] = -nx2;
+    (*grid)->n2[n] = -ny2;
+  }
+  (*grid)->dg[n] = sqrt(pow((*grid)->n1[n],2)+pow((*grid)->n2[n],2));
+  (*grid)->n1[n] = (*grid)->n1[n]/(*grid)->dg[n];
+  (*grid)->n2[n] = (*grid)->n2[n]/(*grid)->dg[n];
+  (*grid)->dg[n]*=2;
+      } else {
+  (*grid)->n1[n] = nx1-nx2;
+  (*grid)->n2[n] = ny1-ny2;
+  (*grid)->dg[n] = sqrt(pow((*grid)->n1[n],2)+pow((*grid)->n2[n],2));
+  (*grid)->n1[n] = (*grid)->n1[n]/(*grid)->dg[n];
+  (*grid)->n2[n] = (*grid)->n2[n]/(*grid)->dg[n];
       }
     }
+////////////end periodic BC///////////////
+
+    // // comment out for periodic bc
+    // // if both cells are not ghost cells 
+    // if((*grid)->grad[2*n]!=-1 && (*grid)->grad[2*n+1]!=-1) {
+    //   (*grid)->n1[n] = (*grid)->xv[(*grid)->grad[2*n]]-(*grid)->xv[(*grid)->grad[2*n+1]];
+    //   (*grid)->n2[n] = (*grid)->yv[(*grid)->grad[2*n]]-(*grid)->yv[(*grid)->grad[2*n+1]];
+    //   (*grid)->dg[n] = sqrt(pow((*grid)->n1[n],2)+pow((*grid)->n2[n],2));
+    //   (*grid)->n1[n] = (*grid)->n1[n]/(*grid)->dg[n];
+    //   (*grid)->n2[n] = (*grid)->n2[n]/(*grid)->dg[n];
+    //   if(((*grid)->xv[(*grid)->grad[2*n]]==
+    //         (*grid)->xv[(*grid)->grad[2*n+1]]) &&
+    //       ((*grid)->yv[(*grid)->grad[2*n]]==
+    //        (*grid)->yv[(*grid)->grad[2*n+1]])) {
+    //     printf("Coincident Voronoi points on edge %d (%d,%d)!\n",n,
+    //         (*grid)->grad[2*n],(*grid)->grad[2*n+1]);
+    //   }
+    // }
     else {
       xc = (*grid)->xe[n];
       yc = (*grid)->ye[n];
@@ -3540,6 +3614,10 @@ static void Geometry(gridT *maingrid, gridT **grid, int myproc)
   for(n=0;n<Nc;n++) {
     for(nf=0;nf<(*grid)->nfaces[n];nf++) {
       ne = (*grid)->face[n*(*grid)->maxfaces+nf];
+      (*grid)->def[n*(*grid)->maxfaces+nf] = 0.5*(*grid)->dg[ne];
+
+      // commented out for periodic boundary conditions//
+      /*
       (*grid)->def[n*(*grid)->maxfaces+nf] = 
         -(((*grid)->xv[n]-maingrid->xp[(*grid)->edges[ne*NUMEDGECOLUMNS]])*(*grid)->n1[ne]+
             ((*grid)->yv[n]-maingrid->yp[(*grid)->edges[ne*NUMEDGECOLUMNS]])*(*grid)->n2[ne])*
@@ -3678,14 +3756,23 @@ REAL GetArea(REAL *xt, REAL *yt, int Nf)
 
 static void InterpDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
 {
-  int n, Nd, proc, nstart, ncount, scaledepth;
-  REAL *xd, *yd, *d, scaledepthfactor;
+  int n, Nd, proc, nstart, ncount, scaledepth, subgrid, segN, N, i;
+  REAL *xd, *yd, *d, *x_sub, *y_sub, *d_sub, scaledepthfactor,depthelev,dmax;
   char str[BUFFERLENGTH];
   FILE *ifile;
   MPI_Status status;
 
   scaledepth=(int)MPI_GetValue(DATAFILE,"scaledepth","InterpDepth",myproc);
   scaledepthfactor=MPI_GetValue(DATAFILE,"scaledepthfactor","InterpDepth",myproc);
+  subgrid=MPI_GetValue(DATAFILE,"subgrid","InterpDepth",myproc);
+  if(subgrid)
+  {
+    segN=MPI_GetValue(DATAFILE,"segN","InterpDepth",myproc);
+    N=(grid->maxfaces-2)*(segN+1)*(segN+2)/2;
+    x_sub = (REAL *)SunMalloc(N*sizeof(REAL),"InterpDepth");
+    y_sub = (REAL *)SunMalloc(N*sizeof(REAL),"InterpDepth");
+    d_sub = (REAL *)SunMalloc(N*sizeof(REAL),"InterpDepth");    
+  }
 
   Nd = MPI_GetSize(INPUTDEPTHFILE,"InterpDepth",myproc);
   xd = (REAL *)SunMalloc(Nd*sizeof(REAL),"InterpDepth");
@@ -3696,7 +3783,7 @@ static void InterpDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
   for(n=0;n<Nd;n++) {
     xd[n]=getfield(ifile,str);
     yd[n]=getfield(ifile,str);
-    d[n]=fabs(getfield(ifile,str));
+    d[n]=getfield(ifile,str);//fabs(getfield(ifile,str));
   }
 
   nstart = myproc*floor(grid->Nc/numprocs);
@@ -3705,22 +3792,40 @@ static void InterpDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
   else
     ncount = floor(grid->Nc/numprocs);
 
-  Interp(xd,yd,d,Nd,&(grid->xv[nstart]),
-	 &(grid->yv[nstart]),&(grid->dv[nstart]),ncount,grid->maxfaces);
+  if(!subgrid)
+    Interp(xd,yd,d,Nd,&(grid->xv[nstart]),
+      &(grid->yv[nstart]),&(grid->dv[nstart]),ncount,grid->maxfaces);
+  else {
+    for(n=nstart;n<nstart+ncount;n++)
+    {
+      CalculateCellSubgridXY(&x_sub[0], &y_sub[0], n, segN, grid, myproc);
+      N=(grid->nfaces[n]-2)*(segN+1)*(segN+2)/2;
+      Interp(xd,yd,d,Nd,&(x_sub[0]), &(y_sub[0]), &(d_sub[0]), N, grid->maxfaces); 
+      dmax=d_sub[0];
+      for(i=1;i<N;i++)
+        dmax=Max(dmax,d_sub[i]);
+      grid->dv[n]=dmax;    
+    }
+  }
 
   if(scaledepth)
     for(n=nstart;n<nstart+ncount;n++)
       grid->dv[n]*=scaledepthfactor;
-
+  
+  depthelev=MPI_GetValue(DATAFILE,"depthelev","InterpDepth",myproc);
+  for(n=nstart;n<nstart+ncount;n++)
+    grid->dv[n]+=depthelev;
+  
+ 
   if(myproc!=0) 
     MPI_Send((void *)(&(grid->dv[nstart])),ncount,MPI_DOUBLE,0,1,comm); 
   else {
     for(proc=1;proc<numprocs;proc++) {
       nstart = proc*floor(grid->Nc/numprocs);
       if(proc==numprocs-1 && grid->Nc%numprocs)
-	ncount = grid->Nc - nstart;
+        ncount = grid->Nc - nstart;
       else
-	ncount = floor(grid->Nc/numprocs);
+        ncount = floor(grid->Nc/numprocs);
 
       MPI_Recv((void *)(&(grid->dv[nstart])),ncount,MPI_DOUBLE,proc,1,comm,&status);
     }
@@ -3730,6 +3835,12 @@ static void InterpDepth(gridT *grid, int myproc, int numprocs, MPI_Comm comm)
   free(xd);
   free(yd);
   free(d);
+  if(subgrid)
+  {
+    free(x_sub);
+    free(y_sub);
+    free(d_sub);
+  }
 }
 
 static int CorrectVoronoi(gridT *grid, int myproc)

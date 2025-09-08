@@ -58,14 +58,20 @@ static void ReadTidalArrays(FILE *ifid, char *istr, int N);
  *
  */
 void SetTideComponents(gridT *grid, int myproc) {
-  int i, j, iptr, jptr, numboundaryedges;
+  int i, j, iptr, jptr, jstr, numboundaryedges, numtides;
   char istr[BUFFERLENGTH], ostr[BUFFERLENGTH], filename[BUFFERLENGTH];
   FILE *ifid, *ofid;
 
   MPI_GetFile(filename,DATAFILE,"TideInput","SetTideComponents",myproc);
-  sprintf(istr,"%s.%d",filename,myproc);
+  jstr = sprintf(istr,"%s",filename);
+  jstr += sprintf(istr+jstr,"%s",".");
+  jstr += sprintf(istr+jstr,"%d",myproc);
+  // sprintf(istr,"%s.%d",filename,myproc);
   MPI_GetFile(filename,DATAFILE,"TideOutput","SetTideComponents",myproc);
-  sprintf(ostr,"%s.%d",filename,myproc);
+  jstr = sprintf(ostr,"%s",filename);
+  jstr += sprintf(ostr+jstr,"%s",".");
+  jstr += sprintf(ostr+jstr,"%d",myproc);
+  // sprintf(ostr,"%s.%d",filename,myproc);
   
   if(VERBOSE>2) printf("Set Tidecomponents on proc %d\n",myproc);
   if((ifid=fopen(istr,"r"))==NULL) {
@@ -92,9 +98,13 @@ void SetTideComponents(gridT *grid, int myproc) {
     if(VERBOSE>2 && myproc==0) printf("Reading tidal data.\n");
 
     // Read in number of tidal components from file
-    fread(&numtides,sizeof(int),1,ifid);
+    if (fread(&numtides,sizeof(int),1,ifid) != sizeof(int)) {
+      printf("failed to read tide file");
+    };
     // Read in number of edges in file
-    fread(&numboundaryedges,sizeof(int),1,ifid);
+    if (fread(&numboundaryedges,sizeof(int),1,ifid) != sizeof(int)) {
+      printf("failed to read tide edge file");
+    };
 
     if(numboundaryedges!=grid->edgedist[3]-grid->edgedist[2]+grid->celldist[2]-grid->celldist[1]) {
       printf("Error reading %s.  Number of edges does not match current run!\n",istr);

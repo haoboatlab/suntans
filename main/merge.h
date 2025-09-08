@@ -18,10 +18,10 @@
 
 #define EDGEMAX 4
 
-gridT *mergedGrid;
-int *Nc_all, *Ne_all, Nc_max, Ne_max;
-int **mnptr_all, **eptr_all, *send3DSize, *send3DESize;
-REAL *localTempMergeArray, *localTempEMergeArray, *merged2DArray, **merged3DArray, *merged3DVector, **merged3DEArray;
+extern gridT *mergedGrid;
+extern int *Nc_all, *Ne_all, Nc_max, Ne_max;
+extern int **mnptr_all, **eptr_all, *send3DSize, *send3DESize;
+extern REAL *localTempMergeArray, *localTempEMergeArray, *merged2DArray, **merged3DArray, *merged3DVector, **merged3DEArray;
 
 void InitializeMerging(gridT *grid, int mergeedges, int numprocs, int myproc, MPI_Comm comm);
 void MergeCellCentered2DArray(REAL *localArray, gridT *grid, int numprocs, int myproc, MPI_Comm comm);

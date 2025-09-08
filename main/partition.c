@@ -12,9 +12,10 @@
 #include "partition.h"
 #include "memory.h"
 #include "grid.h"
+#include <stdlib.h>
 
 //Parmetis 2.0
-//#include "parmetis.h"
+// #include "parmetis.h"
 //Parmetis 3.1
 #include "parmetislib.h"
 
@@ -172,7 +173,7 @@ static void GetGraph(GraphType *graph, gridT *grid, MPI_Comm comm)
     MPI_Recv((void *)graph->adjncy, graph->nedges, IDX_DATATYPE, 0, 1, comm, &status);
 
   if (myproc == 0) 
-    GKfree(&gxadj, &gadjncy, LTERM);
+    GKfree((void **)&gxadj, &gadjncy, LTERM);
 
   MALLOC_CHECK(NULL);
 }

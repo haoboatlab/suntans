@@ -18,7 +18,10 @@
 #include<stdio.h>
 #include "memory.h"
 #include<string.h>
-#include "mympi.h"
+
+unsigned TotSpace;
+int VerboseMemory;
+char oldAllocFunction[BUFFERLENGTH], oldFreeFunction[BUFFERLENGTH];
 
 /*
  * Function: SunMalloc

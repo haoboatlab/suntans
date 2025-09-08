@@ -54,7 +54,7 @@ static void WriteVertSpaceData(char *filename, gridT *grid, int myproc);
 void ReadGrid(gridT **grid, int myproc, int numprocs, MPI_Comm comm) 
 {
   int neigh, n, nf, np, ne, nc, Nkmax;
-  int Np;
+  int Np, jstr;
   char str[BUFFERLENGTH], str2[BUFFERLENGTH];
   FILE *ifile;
 
@@ -62,11 +62,22 @@ void ReadGrid(gridT **grid, int myproc, int numprocs, MPI_Comm comm)
 
   InitLocalGrid(grid);
 
-  sprintf(str,"%s.%d",CELLCENTEREDFILE,myproc);
+  jstr = sprintf(str,"%s",CELLCENTEREDFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc);
+  // sprintf(str,"%s.%d",CELLCENTEREDFILE,myproc);
   (*grid)->Nc = MPI_GetSize(str,"ReadGrid",myproc);
-  sprintf(str,"%s.%d",EDGECENTEREDFILE,myproc);
+  
+  jstr = sprintf(str,"%s",EDGECENTEREDFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc);
+  // sprintf(str,"%s.%d",EDGECENTEREDFILE,myproc);
   (*grid)->Ne = MPI_GetSize(str,"ReadGrid",myproc);
-  sprintf(str,"%s.%d",NODEFILE,myproc);
+
+  jstr = sprintf(str,"%s",NODEFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",NODEFILE,myproc);
   (*grid)->Np = MPI_GetSize(str,"ReadGrid",myproc);
  
   /*
@@ -76,11 +87,16 @@ void ReadGrid(gridT **grid, int myproc, int numprocs, MPI_Comm comm)
   // Here check to make sure you're reading in a topology file that
   // corresponds to the right number of processors. All processors
   // need to read in the 0 topo file to check this (rather than doing an mpi_send/recv
-  sprintf(str,"%s.0",TOPOLOGYFILE);
+  jstr = sprintf(str,"%s",TOPOLOGYFILE);
+  jstr += sprintf(str+jstr,"%s",".0");
+  // sprintf(str,"%s.0",TOPOLOGYFILE);
   CheckTopologyFile(str,myproc,numprocs);
 
   if(VERBOSE>2) printf("Reading %s...\n",str);
-  sprintf(str,"%s.%d",TOPOLOGYFILE,myproc);
+  jstr = sprintf(str,"%s",TOPOLOGYFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",TOPOLOGYFILE,myproc);
   ReadTopologyData(str,*grid,myproc);
   
   /*
@@ -103,7 +119,10 @@ void ReadGrid(gridT **grid, int myproc, int numprocs, MPI_Comm comm)
   (*grid)->cells = (int *)SunMalloc((*grid)->maxfaces*(*grid)->Nc*sizeof(REAL),"ReadGrid");
   (*grid)->mnptr = (int *)SunMalloc((*grid)->Nc*sizeof(int),"ReadGrid");//MR
 
-  sprintf(str,"%s.%d",CELLCENTEREDFILE,myproc);
+  jstr = sprintf(str,"%s",CELLCENTEREDFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",CELLCENTEREDFILE,myproc);
   if(VERBOSE>2) printf("Reading %s...\n",str);
   ReadCellCenteredData(str,*grid,myproc);
   
@@ -128,7 +147,10 @@ void ReadGrid(gridT **grid, int myproc, int numprocs, MPI_Comm comm)
   (*grid)->edges = (int *)SunMalloc((*grid)->Ne*NUMEDGECOLUMNS*sizeof(int),"ReadGrid");
   (*grid)->eptr = (int *)SunMalloc((*grid)->Ne*sizeof(int),"ReadGrid");//MR
 
-  sprintf(str,"%s.%d",EDGECENTEREDFILE,myproc);
+  jstr = sprintf(str,"%s",EDGECENTEREDFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",EDGECENTEREDFILE,myproc);
   if(VERBOSE>2) printf("Reading %s...\n",str);
   ReadEdgeCenteredData(str,*grid,myproc);
 
@@ -149,7 +171,10 @@ void ReadGrid(gridT **grid, int myproc, int numprocs, MPI_Comm comm)
   (*grid)->Nkp= (int*)SunMalloc(Np*sizeof(int),"ReadGrid");
   (*grid)->Actotal = (REAL **)SunMalloc(Np*sizeof(REAL*),"ReadGrid");
 
-  sprintf(str,"%s.%d",NODEFILE,myproc);
+  jstr = sprintf(str,"%s",NODEFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",NODEFILE,myproc);
   if(myproc==0 && VERBOSE>2) printf("Reading %s...\n",str);
   ReadNodalData(str,*grid,myproc);
 
@@ -211,7 +236,10 @@ void ReadDepth(gridT *grid, int myproc) {
   int n;
   char str[BUFFERLENGTH];
   FILE *fid;
-  sprintf(str,"%s-voro",INPUTDEPTHFILE);
+  int jstr;
+  jstr = sprintf(str,"%s",INPUTDEPTHFILE);
+  jstr += sprintf(str+jstr,"%s","-voro");
+  // sprintf(str,"%s-voro",INPUTDEPTHFILE);
 
   fid = MPI_FOpen(str,"r","ReadDepth",myproc);
   for(n=0;n<grid->Nc;n++) {
@@ -277,6 +305,7 @@ void OutputGridData(gridT *maingrid, gridT *grid, int myproc, int numprocs)
   int j, n, nf, neigh, Np=maingrid->Np, Nc=grid->Nc, Ne=grid->Ne;
   char str[BUFFERLENGTH];
   FILE *ofile;
+  int jstr;
 
   // Assume that the triangulation output uses the same as the original format, i.e.
   // no first column and no edge_id
@@ -293,30 +322,48 @@ void OutputGridData(gridT *maingrid, gridT *grid, int myproc, int numprocs)
   
   // On each processor, cells.dat.* always contains the number of faces in the first column,
   // even if cells.dat does not.  
-  sprintf(str,"%s.%d",CELLSFILE,myproc);
+  jstr = sprintf(str,"%s",CELLSFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",CELLSFILE,myproc);
   if(VERBOSE>2) printf("Outputting %s...\n",str); 
   WriteCellsData(str,grid,myproc,"with nfaces");
 
   // On each processor, edges.dat.* always contains the edge_id in the last column,
   // even if edges.dat does not.
-  sprintf(str,"%s.%d",EDGEFILE,myproc);
+  jstr = sprintf(str,"%s",EDGEFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",EDGEFILE,myproc);
   if(VERBOSE>2) printf("Outputting %s...\n",str);
   WriteEdgesData(str,grid,myproc,"with edge_id");
 
   // celldata.dat.* always has number of faces in first column
-  sprintf(str,"%s.%d",CELLCENTEREDFILE,myproc);
+  jstr = sprintf(str,"%s",CELLCENTEREDFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",CELLCENTEREDFILE,myproc);
   if(VERBOSE>2) printf("Outputting %s...\n",str);
   WriteCellCenteredData(str,grid,myproc);
 
-  sprintf(str,"%s.%d",EDGECENTEREDFILE,myproc);
+  jstr = sprintf(str,"%s",EDGECENTEREDFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",EDGECENTEREDFILE,myproc);
   if(VERBOSE>2) printf("Outputting %s...\n",str);
   WriteEdgeCenteredData(str,grid,myproc);
 
-  sprintf(str,"%s.%d",NODEFILE,myproc);
+  jstr = sprintf(str,"%s",NODEFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",NODEFILE,myproc);
   if(VERBOSE>2) printf("Outputting %s...\n",str);
   WriteNodalData(str,grid,maingrid,myproc);
 
-  sprintf(str,"%s.%d",TOPOLOGYFILE,myproc);
+  jstr = sprintf(str,"%s",TOPOLOGYFILE);
+  jstr += sprintf(str+jstr,"%s",".");
+  jstr += sprintf(str+jstr,"%d",myproc); 
+  // sprintf(str,"%s.%d",TOPOLOGYFILE,myproc);
   if(VERBOSE>2) printf("Outputting %s...\n",str);
   WriteTopologyData(str,grid,myproc,numprocs);
 

@@ -12,6 +12,11 @@
 #include "mympi.h"
 #include "timer.h"
 
+// Global variables for timing
+REAL t_start, t_source, t_predictor, t_nonhydro, t_turb, t_transport, t_io, t_comm,
+  t_check, t_tictoc;
+
+
 /*
  * Function: Timer
  * Usage: printf("Time = %f\n",Timer()-t0);
@@ -20,7 +25,7 @@
  * defined in timer.h.
  *
  */
-extern REAL Timer(void) {
+REAL Timer(void) {
   return (REAL)MPI_Wtime();
 }
 

@@ -88,6 +88,8 @@ typedef struct _physT {
   REAL *tau_B;
   REAL *CdT;
   REAL *CdB;
+  REAL *z0B;
+  REAL *z0T;
   REAL **qT;
   REAL **lT;
 
@@ -129,6 +131,8 @@ typedef struct _physT {
   REAL **wtmp;
   REAL **wtmp2;
   REAL **qtmp;
+  REAL **user_def_nc;
+  REAL **user_def_ne;
   //GLS Turbulence variables
   REAL **TP;
   REAL **TB;
@@ -167,6 +171,7 @@ typedef struct _physT {
   REAL *tmpvar;
   REAL *tmpvarW;
   REAL *tmpvarE;
+  REAL *nctemp;
 
   // Least squares fit arrays
   REAL **A;
@@ -189,17 +194,23 @@ typedef struct _propT {
       qmaxiters, hprecond, qprecond, volcheck, masscheck, nonlinear, linearFS, newcells, wetdry, sponge_distance, 
     sponge_decay, thetaramptime, readSalinity, readTemperature, turbmodel, 
     TVD, horiTVD, vertTVD, TVDsalt, TVDtemp, TVDturb, laxWendroff, stairstep, AB, TVDmomentum, conserveMomentum,
-    mergeArrays, computeSediments;
+    mergeArrays, computeSediments, subgrid, Intz0B, Intz0T;
+  int culvertmodel, marshmodel,wavemodel;
   FILE *FreeSurfaceFID, *HorizontalVelocityFID, *VerticalVelocityFID, *SalinityFID, *BGSalinityFID, 
        *InitSalinityFID, *InitTemperatureFID, *TemperatureFID, *PressureFID, *VerticalGridFID, *ConserveFID,    
        *StoreFID, *StartFID, *EddyViscosityFID, *ScalarDiffusivityFID; 
   interpolation interp; int prettyplot;
   int metmodel,  varmodel, outputNetcdf,  metncid, netcdfBdy, netcdfBdyFileID, readinitialnc, initialNCfileID, calcage, agemethod, calcaverage;
-  int outputNetcdfFileID, averageNetcdfFileID;
+  int outputNetcdfFileID, averageNetcdfFileID, initialUNC, restartNC, restartAvgNC;
   REAL nctime, toffSet, gmtoffset;
   int nctimectr, avgtimectr, avgctr, avgfilectr, ntaverage, nstepsperncfile, ncfilectr;
+  int sparsetimectr, sparsefilectr, sparseNetcdfFileID, outputNetcdfSparse, ntsparse, nksparse;
   REAL nugget, sill, range, Lsw, Cda, Ce, Ch;
+  int wave_nesting, lowfreq_nudging, calcreynolds, skipAvgOutput, skipOutput;
+  REAL TauL, TM2, ULm, ULz, UHtide, Uiw, VLm, VLz, Phitide, Phiiw, dW, Fhat_x, Fhat_y, 
+       alpha1, alpha2, delta, drho, h2, D, lambda, xmid, ymid, interp_sponge;
   char  starttime[15], basetime[15]; 
+  char  INPUTZ0BFILE[BUFFERLENGTH], INPUTZ0TFILE[BUFFERLENGTH];
 } propT;
 
 
@@ -216,7 +227,7 @@ void ReadProperties(propT **prop, gridT *grid, int myproc);
 void SetDragCoefficients(gridT *grid, physT *phys, propT *prop);
 REAL DepthFromDZ(gridT *grid, physT *phys, int i, int kind);
 REAL InterpToFace(int j, int k, REAL **phi, REAL **u, gridT *grid);
-void ComputeUC(REAL **ui, REAL **vi, physT *phys, gridT *grid, int myproc, interpolation interp) ;
+void ComputeUC(REAL **ui, REAL **vi, physT *phys, gridT *grid, int myproc, interpolation interp, int subgridmodel) ;
 void UpdateDZ(gridT *grid, physT *phys, propT *prop, int option);
 void ComputeConservatives(gridT *grid, physT *phys, propT *prop, int myproc, int numprocs, MPI_Comm comm);
 void SetDensity(gridT *grid, physT *phys, propT *prop);

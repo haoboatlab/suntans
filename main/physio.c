@@ -11,9 +11,9 @@
  */
 #include "physio.h"
 #include "merge.h"
-#include "sendrecv.h"
 #include "mynetcdf.h"
-
+#include "subgrid.h"
+#include "sendrecv.h"
 /************************************************************************/
 /*                                                                      */
 /*                    All functions are public.                         */
@@ -114,6 +114,7 @@ void Write3DData(REAL **array, REAL *temp_array, int merge, FILE *fid, char *err
 void OpenFiles(propT *prop, int myproc)
 {
   char str[BUFFERLENGTH], filename[BUFFERLENGTH];
+  int jstr;
 
   if(prop->readSalinity && prop->readinitialnc == 0) {
     MPI_GetFile(filename,DATAFILE,"InitSalinityFile","OpenFiles",myproc);
@@ -141,8 +142,11 @@ void OpenFiles(propT *prop, int myproc)
   }
 
   if(prop->calcaverage && prop->mergeArrays==0){
-    MPI_GetFile(filename,DATAFILE,"averageNetcdfFile","OpenFiles",myproc);
-    sprintf(str,"%s.%d",filename,myproc);
+    MPI_GetFile(filename,DATAFILE,"averageNetcdfFile","OpenFiles",myproc);      
+    jstr = sprintf(str,"%s",filename);
+    jstr += sprintf(str+jstr,"%s",".");
+    jstr += sprintf(str+jstr,"%d",myproc);
+    // sprintf(str,"%s.%d",filename,myproc);
     prop->averageNetcdfFileID = MPI_NCOpen(str,NC_NETCDF4,"OpenFiles",myproc);
   }
   
@@ -151,78 +155,111 @@ void OpenFiles(propT *prop, int myproc)
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->FreeSurfaceFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     MPI_GetFile(filename,DATAFILE,"HorizontalVelocityFile","OpenFiles",myproc);
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->HorizontalVelocityFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     MPI_GetFile(filename,DATAFILE,"VerticalVelocityFile","OpenFiles",myproc);
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->VerticalVelocityFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     MPI_GetFile(filename,DATAFILE,"SalinityFile","OpenFiles",myproc);
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->SalinityFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     MPI_GetFile(filename,DATAFILE,"BGSalinityFile","OpenFiles",myproc);
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->BGSalinityFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     MPI_GetFile(filename,DATAFILE,"TemperatureFile","OpenFiles",myproc);
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->TemperatureFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     MPI_GetFile(filename,DATAFILE,"PressureFile","OpenFiles",myproc);
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->PressureFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     MPI_GetFile(filename,DATAFILE,"EddyViscosityFile","OpenFiles",myproc);
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->EddyViscosityFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     MPI_GetFile(filename,DATAFILE,"ScalarDiffusivityFile","OpenFiles",myproc);
     if(prop->mergeArrays)
       strcpy(str,filename);
     else
-      sprintf(str,"%s.%d",filename,myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.%d",filename,myproc);
     prop->ScalarDiffusivityFID = MPI_FOpen(str,"w","OpenFiles",myproc);
     
     // No longer writing to verticalgridfile
     
   }else {
     if(prop->mergeArrays==0){
-	MPI_GetFile(filename,DATAFILE,"outputNetcdfFile","OpenFiles",myproc);
-	sprintf(str,"%s.nc.%d",filename,myproc);
-	prop->outputNetcdfFileID = MPI_NCOpen(str,NC_NETCDF4,"OpenFiles",myproc);
+	    MPI_GetFile(filename,DATAFILE,"outputNetcdfFile","OpenFiles",myproc);
+      jstr = sprintf(str,"%s",filename);
+      jstr += sprintf(str+jstr,"%s",".nc.");
+      jstr += sprintf(str+jstr,"%d",myproc);
+      // sprintf(str,"%s.nc.%d",filename,myproc);
+      prop->outputNetcdfFileID = MPI_NCOpen(str,NC_NETCDF4,"OpenFiles",myproc);
     }
   }
 
   if(RESTART) {
     MPI_GetFile(filename,DATAFILE,"StartFile","OpenFiles",myproc);
-    sprintf(str,"%s.%d",filename,myproc);
+    jstr = sprintf(str,"%s",filename);
+    jstr += sprintf(str+jstr,"%s",".");
+    jstr += sprintf(str+jstr,"%d",myproc);
+    // sprintf(str,"%s.%d",filename,myproc);
     prop->StartFID = MPI_FOpen(str,"r","OpenFiles",myproc);
   }
 
@@ -251,6 +288,7 @@ void OutputPhysicalVariables(gridT *grid, physT *phys, propT *prop,int myproc, i
   char str[BUFFERLENGTH], filename[BUFFERLENGTH];
   REAL *tmp = (REAL *)SunMalloc(grid->Ne*sizeof(REAL),"OutputData"), 
     *array2DPointer, **array3DPointer;
+  int jstr;
 
   if(!(prop->n%prop->ntconserve) && !blowup) {
     ComputeConservatives(grid,phys,prop,myproc,numprocs,comm);
@@ -261,26 +299,31 @@ void OutputPhysicalVariables(gridT *grid, physT *phys, propT *prop,int myproc, i
 
   if(!(prop->n%prop->ntout) || prop->n==1+prop->nstart || blowup) {
 
-    if(myproc==0 && VERBOSE>1) {
-      if(!blowup) {
+    if(myproc==0 && VERBOSE>1) 
+      if(!blowup) 
         printf("Outputting data at step %d of %d\n",prop->n,prop->nsteps+prop->nstart);
-      } else {
+      else
         printf("Outputting blowup data at step %d of %d\n",prop->n,prop->nsteps+prop->nstart);
-      }
-    }
+
     Write2DData(phys->h,prop->mergeArrays,prop->FreeSurfaceFID,"Error outputting free-surface data!\n",
     		grid,numprocs,myproc,comm);
 
     // compute quadratic interpolated estimates for velocity using pretty plot and don't redo work
     if(prop->prettyplot==1 && prop->interp != QUAD) {
       ISendRecvEdgeData3D(phys->u,grid,myproc,comm);
-      ComputeUC(phys->uc, phys->vc, phys,grid, myproc, QUAD);
+      ComputeUC(phys->uc, phys->vc, phys,grid, myproc, QUAD,prop->subgrid);
     }
 
     // Output u, v, w.  Interpolate w from faces to obtain it at the cell-centers first
-    for(i=0;i<grid->Nc;i++)
+    for(i=0;i<grid->Nc;i++){
       for(k=0;k<grid->Nk[i];k++)
-	phys->stmp2[i][k]=0.5*(phys->w[i][k]+phys->w[i][k+1]);
+	      phys->stmp2[i][k]=0.5*(phys->w[i][k]+phys->w[i][k+1]);
+      if(prop->subgrid && !prop->wetdry)
+        if(subgrid->segN==1)
+          if(subgrid->hmax[i]!=subgrid->hmin[i]){
+            phys->stmp2[i][grid->Nk[i]-1]=phys->w[i][grid->Nk[i]-1];
+          }
+    }
 
     Write3DData(phys->uc,phys->htmp,prop->mergeArrays,prop->HorizontalVelocityFID,
 		"Error outputting uc-data!\n",grid,numprocs,myproc,comm);
@@ -339,7 +382,10 @@ void OutputPhysicalVariables(gridT *grid, physT *phys, propT *prop,int myproc, i
       printf("Outputting restart data at step %d\n",prop->n);
 
     MPI_GetFile(filename,DATAFILE,"StoreFile","OutputData",myproc);
-    sprintf(str,"%s.%d",filename,myproc);
+    jstr = sprintf(str,"%s",filename);
+    jstr += sprintf(str+jstr,"%s",".");
+    jstr += sprintf(str+jstr,"%d",myproc);
+    // sprintf(str,"%s.%d",filename,myproc);
     prop->StoreFID = MPI_FOpen(str,"w","OpenFiles",myproc);
 
     nwritten=fwrite(&(prop->n),sizeof(int),1,prop->StoreFID);
@@ -461,6 +507,10 @@ void ReadPhysicalVariables(gridT *grid, physT *phys, propT *prop, int myproc, MP
   for(j=0;j<grid->Ne;j++) 
     if(fread(phys->u[j],sizeof(REAL),grid->Nke[j],prop->StartFID) != grid->Nke[j])
       printf("Error reading phys->u[j]\n");
+    // debugging restart... added this to see what u[j] is here
+    // else
+      // printf("u[%i,1]=%e\n",j,phys->u[j][1]);
+    //
   for(i=0;i<grid->Nc;i++) 
     if(fread(phys->w[i],sizeof(REAL),grid->Nk[i]+1,prop->StartFID) != grid->Nk[i]+1)
       printf("Error reading phys->w[i]\n");
@@ -484,9 +534,18 @@ void ReadPhysicalVariables(gridT *grid, physT *phys, propT *prop, int myproc, MP
 
   UpdateDZ(grid,phys,prop, 0);
 
+  // SetFluxHeight(grid,phys,prop);
+  
   // cell centered velocity computed so that this does not 
   // need to be reconsidered 
-  ComputeUC(phys->uc, phys->vc, phys,grid, myproc, prop->interp);
+  // ComputeUC(phys->uc, phys->vc, phys,grid, myproc, prop->interp,prop->subgrid);
+    ComputeUC(phys->uc, phys->vc, phys,grid, myproc, prop->interp,0);
+
+
+    // debugging restart... added this to see what uc[i,1] is here
+    // for(i=0;i<grid->Nc;i++) 
+    //   printf("uc[%i,1]=%e\n",i,phys->uc[i][1]);
+    //
 
   ISendRecvCellData3D(phys->uc,grid,myproc,comm);
   ISendRecvCellData3D(phys->vc,grid,myproc,comm);

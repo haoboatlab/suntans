@@ -19,6 +19,17 @@
 #include "sediments.h"
 #include "profiles.h"
 
+FILE *FreeSurfaceProfFID, *HorizontalVelocityProfFID, *VerticalVelocityProfFID,
+  *SalinityProfFID, *BGSalinityProfFID, *TemperatureProfFID, *PressureProfFID,
+  *EddyViscosityProfFID, *ScalarDiffusivityProfFID, *ProfileDataFID,
+  **SediProfFID;
+
+int existProfs, numInterpPoints, ntoutProfs, NkmaxProfs, numTotalDataPoints, numLocalDataPoints, *dataIndices, *interpIndices;
+int *total2d, all2d, *total3d, *allIndices;
+REAL *dataXY, *merge_tmp, *merge_tmp2;
+char ProfileVariables[BUFFERLENGTH];
+
+
 /*
  * All functions are private except for InterpData which is called from phys.c
  *
@@ -130,7 +141,7 @@ void InterpData(gridT *grid, physT *phys, propT *prop, MPI_Comm comm, int numpro
  *
  */
 void InitializeOutputIndices(gridT *grid, MPI_Comm comm, int numprocs, int myproc) {
-  int i, ni, Ndata, Np, *cells, nf, total2dtemp, total3dtemp, proc, tempSum;
+  int i, ni, Ndata, Np, *cells, nf, total2dtemp, total3dtemp, proc, jstr, tempSum;
   REAL x, y, *xp, *yp;
   char filename[BUFFERLENGTH], str[BUFFERLENGTH];
   FILE *ifid;
@@ -150,7 +161,11 @@ void InitializeOutputIndices(gridT *grid, MPI_Comm comm, int numprocs, int mypro
   // Read in the cells data for this proc since it is not available anymore
   // as part of the grid struct.
   MPI_GetFile(str,DATAFILE,"cells","InitializeOutputIndices",myproc);
-  sprintf(filename,"%s.%d",str,myproc);
+
+  jstr = sprintf(filename,"%s",str);
+  jstr += sprintf(filename+jstr,"%s",".");
+  jstr += sprintf(filename+jstr,"%d",myproc);
+  // sprintf(filename,"%s.%d",str,myproc);
 
   cells = (int *)SunMalloc(grid->maxfaces*grid->Nc*sizeof(int),"InitializeOutputIndices");
 
@@ -333,69 +348,86 @@ static int InPolygon(REAL x, REAL y, REAL *xg, REAL *yg, int N) {
 static void OpenDataFiles(int myproc) {
   int status, nosize;
   char str[BUFFERLENGTH], filename[BUFFERLENGTH];
+  int jstr;
 
   if(strlen(ProfileVariables)>0) {
     if(ContainsCharacter(ProfileVariables,'h')) {
       MPI_GetFile(filename,DATAFILE,"FreeSurfaceFile","OpenDataFiles",myproc);
-      if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
-	FreeSurfaceProfFID = fopen(str,"w");
+      if(myproc==0) {          
+        jstr = sprintf(str,"%s",filename);
+        jstr += sprintf(str+jstr,"%s","a.prof");
+        // sprintf(str,"%sa.prof",filename);
+        FreeSurfaceProfFID = fopen(str,"w");
       }
     }
     
     if(ContainsCharacter(ProfileVariables,'u')) {
       MPI_GetFile(filename,DATAFILE,"HorizontalVelocityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
-	HorizontalVelocityProfFID = fopen(str,"w");
+        jstr = sprintf(str,"%s",filename);
+        jstr += sprintf(str+jstr,"%s","a.prof");
+        // sprintf(str,"%sa.prof",filename);
+        HorizontalVelocityProfFID = fopen(str,"w");
       }
     }
     
     if(ContainsCharacter(ProfileVariables,'s')) {
       MPI_GetFile(filename,DATAFILE,"SalinityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
-	SalinityProfFID = fopen(str,"w");
+        jstr = sprintf(str,"%s",filename);
+        jstr += sprintf(str+jstr,"%s","a.prof");
+        // sprintf(str,"%sa.prof",filename);
+        SalinityProfFID = fopen(str,"w");
       }
     }
 
     if(ContainsCharacter(ProfileVariables,'b')) {
       MPI_GetFile(filename,DATAFILE,"BGSalinityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
-	BGSalinityProfFID = fopen(str,"w");
+        jstr = sprintf(str,"%s",filename);
+        jstr += sprintf(str+jstr,"%s","a.prof");
+        // sprintf(str,"%sa.prof",filename);
+        BGSalinityProfFID = fopen(str,"w");
       }
     }
     
     if(ContainsCharacter(ProfileVariables,'T')) {
       MPI_GetFile(filename,DATAFILE,"TemperatureFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
-	TemperatureProfFID = fopen(str,"w");
+        jstr = sprintf(str,"%s",filename);
+        jstr += sprintf(str+jstr,"%s","a.prof");
+        // sprintf(str,"%sa.prof",filename);
+        TemperatureProfFID = fopen(str,"w");
       }
     }
     
     if(ContainsCharacter(ProfileVariables,'q')) {
       MPI_GetFile(filename,DATAFILE,"PressureFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
-	PressureProfFID = fopen(str,"w");
+        jstr = sprintf(str,"%s",filename);
+        jstr += sprintf(str+jstr,"%s","a.prof");
+        // sprintf(str,"%sa.prof",filename);
+        PressureProfFID = fopen(str,"w");
       }
     }
     
     if(ContainsCharacter(ProfileVariables,'n')) {
       MPI_GetFile(filename,DATAFILE,"EddyViscosityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
-	EddyViscosityProfFID = fopen(str,"w");
+        jstr = sprintf(str,"%s",filename);
+        jstr += sprintf(str+jstr,"%s","a.prof");
+        // sprintf(str,"%sa.prof",filename);
+        EddyViscosityProfFID = fopen(str,"w");
       }
     }
     
     if(ContainsCharacter(ProfileVariables,'k')) {
       MPI_GetFile(filename,DATAFILE,"ScalarDiffusivityFile","OpenDataFiles",myproc);
       if(myproc==0) {
-	sprintf(str,"%s.prof",filename);
-	ScalarDiffusivityProfFID = fopen(str,"w");
+        jstr = sprintf(str,"%s",filename);
+        jstr += sprintf(str+jstr,"%s","a.prof");
+        // sprintf(str,"%sa.prof",filename);
+        ScalarDiffusivityProfFID = fopen(str,"w");
       }
     }
 
@@ -406,7 +438,9 @@ static void OpenDataFiles(int myproc) {
 	sprintf(str,"Sediment%dFile",nosize+1);
 	MPI_GetFile(filename,DATAFILE,str,"OpenDataFiles",myproc);
 	if(myproc==0) {
-	  sprintf(str,"%s.prof",filename);
+    jstr = sprintf(str,"%s",filename);
+    jstr += sprintf(str+jstr,"%s","a.prof");
+	  // sprintf(str,"%sa.prof",filename);
 	  SediProfFID[nosize] = fopen(str,"w");
 	}
       }
@@ -801,7 +835,7 @@ static int GetProfileVariables(void) {
     return 0;
 
   if(!strcmp(ProfileVariables,"none")) {
-    sprintf(ProfileVariables,"");
+    sprintf(ProfileVariables,"%s","");
     return 0;
   } else if(!strcmp(ProfileVariables,"all")) {
     sprintf(ProfileVariables,"%s",ALLPROFILEVARIABLES);
